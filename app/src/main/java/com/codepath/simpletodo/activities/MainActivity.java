@@ -5,23 +5,18 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 
 import com.codepath.simpletodo.R;
-
-import org.apache.commons.io.FileUtils;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
+import com.codepath.simpletodo.adapters.TodoItemAdapter;
+import com.codepath.simpletodo.dbhandlers.TodoItemsDbHandler;
+import com.codepath.simpletodo.models.TodoItem;
 
 public class MainActivity extends AppCompatActivity {
 
-    ArrayList<String> items;
-    ArrayAdapter<String> itemsAdapter;
     ListView lvItems;
+    TodoItemsDbHandler dbHandler;
 
     private final int REQUEST_CODE = 20;
 
@@ -29,30 +24,39 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        dbHandler = new TodoItemsDbHandler(this);
         lvItems = (ListView) findViewById(R.id.lvItems);
-        readItems();
-        itemsAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, items);
-        lvItems.setAdapter(itemsAdapter);
+
+        resetListView();
         setupListViewListener();
     }
 
     public void onAddItem(View v) {
         EditText etNewItem = (EditText) findViewById(R.id.etNewItem);
         String itemText = etNewItem.getText().toString().trim();
-        if (itemText.isEmpty()) { return; }
-        itemsAdapter.add(itemText);
+
+        if (itemText.isEmpty()) {
+            return;
+        }
+
+        TodoItem item = new TodoItem();
+        item.text = itemText;
+
+        dbHandler.create(item);
+
         etNewItem.setText("");
-        writeItems();
+        resetListView();
     }
 
     private void setupListViewListener() {
         lvItems.setOnItemLongClickListener(
                 new AdapterView.OnItemLongClickListener() {
                     @Override
-                    public boolean onItemLongClick(AdapterView<?> adapter, View item, int pos, long id) {
-                        items.remove(pos);
-                        itemsAdapter.notifyDataSetChanged();
-                        writeItems();
+                    public boolean onItemLongClick(AdapterView<?> adapter, View view, int pos, long id) {
+                        TodoItem item = (TodoItem) lvItems.getItemAtPosition(pos);
+                        dbHandler.delete(item.id);
+                        resetListView();
                         return true;
                     }
                 }
@@ -63,8 +67,9 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onItemClick(AdapterView<?> adapter, View view, int pos, long arg) {
                         Intent i = new Intent(MainActivity.this, EditItemActivity.class);
-                        i.putExtra("text", lvItems.getItemAtPosition(pos).toString());
-                        i.putExtra("position", pos);
+                        TodoItem item = (TodoItem) lvItems.getItemAtPosition(pos);
+                        i.putExtra("text", item.text);
+                        i.putExtra("id", item.id);
                         startActivityForResult(i, REQUEST_CODE);
                     }
                 }
@@ -74,32 +79,16 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent i) {
         if (resultCode == RESULT_OK && requestCode == REQUEST_CODE) {
-            String text = i.getStringExtra("text");
-            int pos = i.getIntExtra("position", 0);
-            items.remove(pos);
-            items.add(pos, text);
-            itemsAdapter.notifyDataSetChanged();
-            writeItems();
+            TodoItem item = new TodoItem();
+            item.text = i.getStringExtra("text");
+            item.id = i.getIntExtra("id", 0);
+            dbHandler.update(item);
+            resetListView();
         }
     }
 
-    private void readItems() {
-        File filesDir = getFilesDir();
-        File todoFile = new File(filesDir, "todo.txt");
-        try {
-            items = new ArrayList<String>(FileUtils.readLines(todoFile));
-        } catch (IOException e) {
-            items = new ArrayList<String>();
-        }
-    }
-
-    private void writeItems() {
-        File filesDir = getFilesDir();
-        File todoFile = new File(filesDir, "todo.txt");
-        try {
-            FileUtils.writeLines(todoFile, items);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    private void resetListView() {
+        TodoItemAdapter adapter = new TodoItemAdapter(this, R.layout.listview_item_row, dbHandler.read());
+        lvItems.setAdapter(adapter);
     }
 }

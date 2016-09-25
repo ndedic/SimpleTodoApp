@@ -12,14 +12,14 @@ public class EditItemActivity extends AppCompatActivity {
 
     EditText editText;
     String text;
-    int position;
+    int id;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_item);
         text = getIntent().getStringExtra("text");
-        position = getIntent().getIntExtra("position", 0);
+        id = getIntent().getIntExtra("id", 0);
         editText = (EditText) findViewById(R.id.editText);
         populateForm();
     }
@@ -32,7 +32,7 @@ public class EditItemActivity extends AppCompatActivity {
     public void onSave(View v) {
         Intent i = new Intent();
         i.putExtra("text", editText.getText().toString());
-        i.putExtra("position", position);
+        i.putExtra("id", id);
         setResult(RESULT_OK, i);
         finish();
     }
