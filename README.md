@@ -4,7 +4,7 @@
 
 Submitted by: **Nedim Dedic**
 
-Time spent: **1.5** hours spent in total
+Time spent: **4.5** hours spent in total
 
 ## User Stories
 
